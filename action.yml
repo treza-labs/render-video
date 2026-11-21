@@ -1,0 +1,67 @@
+name: "Treza Render Video"
+description: "Render an AI video or image, or run a saved Treza pipeline, from a workflow step. Priced first, with a cap you set."
+author: "Treza Labs, Inc."
+branding:
+  icon: film
+  color: purple
+
+inputs:
+  api-key:
+    description: "Your Treza API key, from a repository secret such as TREZA_API_KEY. Make one at https://www.trezalabs.com/platform/api-keys"
+    required: true
+  mode:
+    description: "What to make: video (a clip from prompt), image (a picture from prompt), or pipeline (run a saved Treza pipeline)."
+    required: false
+    default: "video"
+  prompt:
+    description: "video and image modes: what the clip or picture shows. Up to 2000 characters."
+    required: false
+  model:
+    description: "video and image modes: a Treza model ID. Leave empty for Treza's default (Veo 3.1 Lite for video, Nano Banana for images)."
+    required: false
+  duration:
+    description: "video mode: length in seconds, 1 to 60. Models with fixed lengths use the next one up. Treza's default is 4."
+    required: false
+  aspect-ratio:
+    description: "video mode: 16:9 (default), 9:16 (Shorts, Reels, TikTok) or 1:1. image mode: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9 or 21:9."
+    required: false
+  pipeline-id:
+    description: "pipeline mode: the pipeline's ID (starts with pipeline_), from its address in Treza."
+    required: false
+  inputs:
+    description: 'pipeline mode: a JSON object keyed by input step, like {"prompt_1": "a lighthouse at dawn"}. Steps left out run with what is saved in the pipeline.'
+    required: false
+  max-cost-usd:
+    description: "The most this run may cost, in US dollars. Treza quotes the price first; over this, nothing starts and nothing is charged. Required in video and pipeline modes."
+    required: false
+  wait:
+    description: "Wait for the render to finish. With false, the step ends once the render has started."
+    required: false
+    default: "true"
+  timeout-minutes:
+    description: "How long to wait for the render. When it is still going, the step fails and the render carries on in Treza."
+    required: false
+    default: "15"
+  download-path:
+    description: "Save the first file here, relative to the workspace. A path ending in / (or an existing folder) keeps the file's own name."
+    required: false
+
+outputs:
+  run-id:
+    description: "The Treza run ID."
+  pipeline-id:
+    description: "The pipeline the run belongs to (make_video and make_image prepare one per render)."
+  status:
+    description: "success, partial, error, cancelled, running (wait false, or timed out), not-started (refused before starting), or unknown (the start was not confirmed)."
+  price-usd:
+    description: "The quoted price in US dollars, like 0.28. 0.00 for a free image."
+  url:
+    description: "The first file's URL (the video for video mode, the picture for image mode)."
+  files:
+    description: "Every file URL the run returned, as a JSON array."
+  path:
+    description: "Where download-path saved the file, as an absolute path."
+
+runs:
+  using: node24
+  main: dist/index.js

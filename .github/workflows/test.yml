@@ -1,0 +1,91 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit and end-to-end tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: dist/ matches the source
+        run: |
+          npm run build
+          git diff --exit-code -- dist/ || { echo "::error::dist/ is out of date. Run npm run build and commit dist/."; exit 1; }
+      - run: npm test
+
+  action:
+    name: The action itself, against a stand-in for Treza
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Start the stand-in
+        run: |
+          node test/mock-treza.mjs --port 8787 &
+          for i in $(seq 1 40); do curl -sf http://127.0.0.1:8787/health && exit 0; sleep 0.25; done
+          exit 1
+
+      - name: Render a video
+        id: video
+        uses: ./
+        env:
+          TREZA_BASE_URL: http://127.0.0.1:8787
+        with:
+          api-key: treza_live_selftest_not_a_real_key
+          prompt: A paper boat on a pond
+          aspect-ratio: "9:16"
+          max-cost-usd: "1.00"
+          download-path: out/
+
+      - name: Check its outputs
+        env:
+          STATUS: ${{ steps.video.outputs.status }}
+          PRICE: ${{ steps.video.outputs.price-usd }}
+          URL: ${{ steps.video.outputs.url }}
+          FILES: ${{ steps.video.outputs.files }}
+          FILE_PATH: ${{ steps.video.outputs.path }}
+          RUN_ID: ${{ steps.video.outputs.run-id }}
+        run: |
+          set -x
+          test "$STATUS" = success
+          test "$PRICE" = 0.28
+          test -n "$RUN_ID"
+          test "$URL" = "http://127.0.0.1:8787/media/clip.mp4?s=sig"
+          test "$(echo "$FILES" | jq -r '.[0]')" = "$URL"
+          test "$FILE_PATH" = "$GITHUB_WORKSPACE/out/clip.mp4"
+          test -s "$FILE_PATH"
+
+      - name: A render over the cap
+        id: over
+        continue-on-error: true
+        uses: ./
+        env:
+          TREZA_BASE_URL: http://127.0.0.1:8787
+        with:
+          api-key: treza_live_selftest_not_a_real_key
+          prompt: A paper boat on a pond
+          max-cost-usd: "0.10"
+
+      - name: Check it failed and started nothing
+        env:
+          OUTCOME: ${{ steps.over.outcome }}
+          STATUS: ${{ steps.over.outputs.status }}
+        run: |
+          set -x
+          test "$OUTCOME" = failure
+          test "$STATUS" = not-started
+          test "$(curl -sf http://127.0.0.1:8787/calls | jq '[.calls[] | select(.tool == "run_pipeline")] | length')" = 1

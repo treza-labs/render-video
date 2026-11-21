@@ -1,0 +1,36 @@
+{
+  "name": "render-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub Action: render an AI video or image, or run a saved Treza pipeline, from a workflow step, with a price cap.",
+  "license": "MIT",
+  "author": "Treza Labs, Inc. <hello@trezalabs.com>",
+  "homepage": "https://www.trezalabs.com/integrations",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/treza-labs/render-video.git"
+  },
+  "bugs": {
+    "url": "https://github.com/treza-labs/render-video/issues"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/index.js --legal-comments=none --banner:js=\"import { createRequire as __treza_createRequire } from 'node:module'; const require = __treza_createRequire(import.meta.url);\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "all": "npm run typecheck && npm run build && npm test"
+  },
+  "dependencies": {
+    "@actions/core": "3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}
